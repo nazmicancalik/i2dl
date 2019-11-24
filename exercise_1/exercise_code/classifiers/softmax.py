@@ -114,14 +114,21 @@ def cross_entropy_loss_vectorized(W, X, y, reg):
     probs = np.exp(Z)/sum_Z
 
     loss = np.sum(-np.log(probs[np.arange(n_train),y]))
+    loss /= n_train
     loss += 0.5 * reg * np.sum(W * W)
 
     # Finding the gradient.
     indices = np.zeros_like(probs)
     indices[np.arange(n_train),y] = 1
     dW = X.T.dot(probs - indices)
+    
+    # Normalize the gradient.
+    dW /= n_train
+
+    # Regularize the gradient.
     dW += reg*W
     
+
     ############################################################################
     #                          END OF YOUR CODE                                #
     ############################################################################
