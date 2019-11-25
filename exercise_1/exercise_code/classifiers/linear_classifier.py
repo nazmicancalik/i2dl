@@ -54,8 +54,8 @@ class LinearClassifier(object):
             #########################################################################
 
             indices = np.random.choice(num_train,batch_size,replace=True)
-            print(indices)
-
+            X_batch = np.take(X,indices,axis=0)
+            y_batch = np.take(y,indices,axis=0)
             #########################################################################
             #                       END OF YOUR CODE                                #
             #########################################################################
@@ -70,7 +70,7 @@ class LinearClassifier(object):
             # Update the weights using the gradient and the learning rate.          #
             #########################################################################
 
-            pass
+            self.W -= learning_rate * grad
 
             #########################################################################
             #                       END OF YOUR CODE                                #
@@ -100,7 +100,12 @@ class LinearClassifier(object):
         # Implement this method. Store the predicted labels in y_pred.            #
         ###########################################################################
 
-        pass
+        first_layer_output = np.dot(X,self.W)
+        print(first_layer_output.shape)
+        exps = np.exp(first_layer_output)
+        softmax_layer_output = exps / np.sum(exps, axis=1)
+
+        print(softmax_layer_output.shape)
 
         ###########################################################################
         #                           END OF YOUR CODE                              #
