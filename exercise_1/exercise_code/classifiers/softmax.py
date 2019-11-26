@@ -169,8 +169,8 @@ def softmax_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     # once you are confident that your validation code works, you should rerun #
     # the validation code with a larger value for num_iters.                   #
     ############################################################################
-    number_of_learning_rates = 10
-    number_of_regularization_strengths = 10
+    number_of_learning_rates = 5
+    number_of_regularization_strengths = 5
 
     learning_rates = np.linspace(learning_rates[0],learning_rates[1],number_of_learning_rates)
     regularization_strengths = np.linspace(regularization_strengths[0],regularization_strengths[1],number_of_regularization_strengths)
@@ -178,18 +178,22 @@ def softmax_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     # Get the combinations of the learning rates and regularizations strengths.
     combinations = np.array(np.meshgrid(learning_rates,regularization_strengths)).T.reshape(-1,2)
     for comb in combinations:
+        
+        print("Trying combination: ", comb)
+
         # Create and train the model
         softmax_classifier = SoftmaxClassifier()
-        softmax_classifier.train(X_train,y_train,learning_rate=comb[0],reg=comb[1],num_iters=5)
+        softmax_classifier.train(X_train,y_train,learning_rate=comb[0],reg=comb[1],num_iters=1500)
         
         # Get training accuracy
         y_train_pred = softmax_classifier.predict(X_train)
-        training_accuracy = (np.mean(y_train == y_train_pred), )
+        [training_accuracy,] = (np.mean(y_train == y_train_pred), )
 
         # Get validation accuracy
         y_validation_pred = softmax_classifier.predict(X_val)
-        validation_accuracy = (np.mean(y_val == y_validation_pred), )
-
+        [validation_accuracy,] = (np.mean(y_val == y_validation_pred), )
+        print("val", validation_accuracy)
+        
         # Save the results
         results[(comb[0],comb[1])] = (training_accuracy,validation_accuracy)
 
