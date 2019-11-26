@@ -103,10 +103,9 @@ class LinearClassifier(object):
         first_layer_output = np.dot(X,self.W)
         print(first_layer_output.shape)
         exps = np.exp(first_layer_output)
-        softmax_layer_output = exps / np.sum(exps, axis=1)
-
-        print(softmax_layer_output.shape)
-
+        softmax_layer_output = exps / np.sum(exps, axis=0)
+        
+        y_pred = np.argmax(softmax_layer_output, axis=-1)
         ###########################################################################
         #                           END OF YOUR CODE                              #
         ###########################################################################
