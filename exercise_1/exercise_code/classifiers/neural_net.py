@@ -78,8 +78,24 @@ class TwoLayerNet(object):
         # input. Store the result in the scores variable, which should be an   #
         # array of shape (N, C).                                               #         
         ########################################################################
+        _, C = W2.shape
+        
+        # Input Layer -> 1st Intermediate Place
+        output_1 = np.dot(X,W1) + b1
+        
+        # 1st Intermediate Place -> Hidden Layer (ReLU activation) 
+        activated_output_1 = np.maximum(0,output_1)
+        
+        # Hidden Layer -> 2nd Itermediate Place
+        output_2 = np.dot(activated_output_1,W2) + b2
 
-        pass
+        # 2nd Intermediate Layer -> Output Layer (Softmax)
+        output_2 -= np.max(output_2,axis=1,keepdims=True)
+        row_sum_output_2 = np.sum(np.exp(output_2), axis=1, keepdims=True)
+        softmax_output = np.exp(output_2)/row_sum_output_2
+        
+        # Scores are the output of 2nd fully connected layer.
+        scores = output_2
 
         ########################################################################
         #                              END OF YOUR CODE                        #
