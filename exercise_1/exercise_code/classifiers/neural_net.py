@@ -88,15 +88,15 @@ class TwoLayerNet(object):
         
         # Hidden Layer -> 2nd Itermediate Place
         output_2 = np.dot(activated_output_1,W2) + b2
-
-        # 2nd Intermediate Layer -> Output Layer (Softmax)
-        output_2 -= np.max(output_2,axis=1,keepdims=True)
-        row_sum_output_2 = np.sum(np.exp(output_2), axis=1, keepdims=True)
-        softmax_output = np.exp(output_2)/row_sum_output_2
         
         # Scores are the output of 2nd fully connected layer.
         scores = output_2
 
+        # 2nd Intermediate Layer -> Output Layer (Softmax)
+        output_2_after_max_deduction = output_2 - np.max(output_2)
+        row_sum_output_2 = np.sum(np.exp(output_2_after_max_deduction), axis=1, keepdims=True)
+        softmax_output = np.exp(output_2_after_max_deduction)/row_sum_output_2
+        
         ########################################################################
         #                              END OF YOUR CODE                        #
         ########################################################################
