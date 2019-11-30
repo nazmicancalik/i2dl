@@ -91,11 +91,6 @@ class TwoLayerNet(object):
         
         # Scores are the output of 2nd fully connected layer.
         scores = output_2
-
-        # 2nd Intermediate Layer -> Output Layer (Softmax)
-        output_2_after_max_deduction = output_2 - np.max(output_2)
-        row_sum_output_2 = np.sum(np.exp(output_2_after_max_deduction), axis=1, keepdims=True)
-        softmax_output = np.exp(output_2_after_max_deduction)/row_sum_output_2
         
         ########################################################################
         #                              END OF YOUR CODE                        #
@@ -115,7 +110,22 @@ class TwoLayerNet(object):
         # the regularization loss by 0.5                                       #
         ########################################################################
 
-        pass
+        # 2nd Intermediate Layer -> Output Layer (Softmax)
+        output_2_after_max_deduction = output_2 - np.max(output_2)
+        row_sum_output_2 = np.sum(np.exp(output_2_after_max_deduction), axis=1, keepdims=True)
+        softmax_output = np.exp(output_2_after_max_deduction)/row_sum_output_2
+        
+        # Cross entropy loss.
+        data_loss = np.sum(-np.log(softmax_output[np.arange(N),y]))
+        
+        # Normalize the data loss.
+        data_loss /= N
+
+        # Regularization loss.
+        reg_loss = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
+        
+        # Total loss is the sum of data loss and regularization loss.
+        loss = data_loss + reg_loss
 
         ########################################################################
         #                              END OF YOUR CODE                        #
