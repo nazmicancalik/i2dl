@@ -1,7 +1,7 @@
 """Two Layer Network."""
 # pylint: disable=invalid-name
 import numpy as np
-
+import math
 
 class TwoLayerNet(object):
     """
@@ -111,12 +111,14 @@ class TwoLayerNet(object):
         ########################################################################
 
         # 2nd Intermediate Layer -> Output Layer (Softmax)
-        output_2_after_max_deduction = output_2 - np.max(output_2)
-        row_sum_output_2 = np.sum(np.exp(output_2_after_max_deduction), axis=1, keepdims=True)
-        softmax_output = np.exp(output_2_after_max_deduction)/row_sum_output_2
+        z = output_2 - np.max(output_2,axis=1,keepdims=True)
+        z_exp = np.exp(z)
+        sum_z = np.sum(z_exp,axis=1, keepdims=True)
+        softmax_output = z_exp/sum_z
         
         # Cross entropy loss.
-        data_loss = np.sum(-np.log(softmax_output[np.arange(N),y]))
+        log_input = softmax_output[np.arange(N),y]
+        data_loss = np.sum(-np.log(log_input))
         
         # Normalize the data loss.
         data_loss /= N
@@ -139,9 +141,29 @@ class TwoLayerNet(object):
         # example, grads['W1'] should store the gradient on W1, and be a matrix#
         # of same size                                                         #
         ########################################################################
+        # softmax_derivative = softmax_output From now on
+        softmax_output[np.arange(N), y] -= 1
+        softmax_output /= N
 
-        pass
+        # dW2
+        dW2 = np.dot(activated_output_1.T, softmax_output)
 
+        # db2
+        db2 = np.sum(softmax_output,axis=0)
+
+        # dW1
+        dW1_ = np.dot(softmax_output,W2.T)
+        dW1_[output_1 <= 0] = 0
+        dW1 = np.dot(X.T,dW1_)
+
+        # db1
+        db1 = np.sum(dW1_,axis=0)
+
+        # We also need to add the derivative of regularization loss to necessary parts.
+        dW1 += reg * W1
+        dW2 += reg * W2
+        
+        grads = {'W1': dW1, 'b1':db1, 'W2':dW2, 'b2':db2}
         ########################################################################
         #                              END OF YOUR CODE                        #
         ########################################################################
@@ -186,8 +208,9 @@ class TwoLayerNet(object):
             # TODO: Create a random minibatch of training data and labels,     #
             # storing hem in X_batch and y_batch respectively.                 #
             ####################################################################
-
-            pass
+            indices = np.random.choice(num_train,batch_size,replace=True)
+            X_batch = np.take(X,indices,axis=0)
+            y_batch = np.take(y,indices,axis=0)
 
             ####################################################################
             #                             END OF YOUR CODE                     #
@@ -203,8 +226,10 @@ class TwoLayerNet(object):
             # using stochastic gradient descent. You'll need to use the        #
             # gradients stored in the grads dictionary defined above.          #
             ####################################################################
-
-            pass
+            self.params['W2'] -= learning_rate * grads['W2'] 
+            self.params['b2'] -= learning_rate * grads['b2']
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
 
             ####################################################################
             #                             END OF YOUR CODE                     #
@@ -251,8 +276,22 @@ class TwoLayerNet(object):
         # TODO: Implement this function; it should be VERY simple!             #
         ########################################################################
 
-        pass
-
+        # Find first layer output
+        o1 = np.dot(X,self.params['W1']) + self.params['b1']
+        
+        # Activated first layer output
+        ao1 = np.maximum(0,o1)  
+        
+        # Find second layer output
+        o2 = np.dot(ao1,self.params['W2']) + self.params['b2']
+        
+        # Find Softmax output.
+        o2_safe = o2 - np.max(o2, axis=1, keepdims=True)
+        o2_exp = np.exp(o2_safe)
+        row_sum_o2_safe = np.sum(o2_exp, axis=1, keepdims=True)
+        so = o2_exp/row_sum_o2_safe
+        
+        y_pred = np.argmax(so, axis=-1)
         ########################################################################
         #                              END OF YOUR CODE                        #
         ########################################################################
@@ -276,9 +315,46 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     # to  write code to sweep through possible combinations of hyperparameters #
     # automatically like we did on the previous exercises.                     #
     ############################################################################
+    results = {}
+    best_val = -1
+    best_comb = None
 
-    pass
+    input_layer_size = X_train.shape[1]
+    output_layer_size = np.max(y_train) + 1
 
+    learning_rate_limits = [1e-3, 1e-5]
+    hidden_layer_size_limits = [100, 500]
+    num_epochs_limits = [2000, 5000]
+    regularization_strength_limits = [1e-1, 1e-3]
+
+    num_learning_rates = 3
+    num_hidden_layer_size = 5
+    num_num_epochs = 4
+    num_regularization_strength = 2
+
+    learning_rates = np.linspace(learning_rate_limits[0],learning_rate_limits[1],num_learning_rates)
+    hidden_layer_sizes = np.linspace(hidden_layer_size_limits[0],hidden_layer_size_limits[1],num_hidden_layer_size, dtype=int)
+    num_epochs = np.linspace(num_epochs_limits[0],num_epochs_limits[1],num_num_epochs, dtype=int)
+    regularization_strengths = np.linspace(regularization_strength_limits[0],regularization_strength_limits[1],num_regularization_strength)
+
+    combinations = np.array(np.meshgrid(learning_rates,hidden_layer_sizes, num_epochs, regularization_strengths)).T.reshape(-1,4)
+    for i,combination in enumerate(combinations):
+      learning_rate = combination[0]
+      hidden_layer_size = int(combination[1])
+      num_epoch = int(combination[2])
+      regularization_strength = combination[3]
+      print('[ %% %f ] - Combination learning rate: [ %f ], hidden size: [ %d ], num epoch: [ %d ], reg: [ %f ]' % 
+        ((i*100/len(combinations)),learning_rate, hidden_layer_size, num_epoch,regularization_strength))
+      
+      net = TwoLayerNet(input_layer_size,hidden_layer_size,output_layer_size)
+      res = net.train(X_train,y_train, X_val, y_val, learning_rate=learning_rate,reg=regularization_strength,num_iters=num_epoch)
+      
+      if res['val_acc_history'][-1] > best_val:
+        best_val = res['val_acc_history'][-1]
+        best_net = net
+        best_comb = combination
+      print('Training Accuracy: [ %f ] Validation Accuracy : [ %f ]' % (res['train_acc_history'][-1],res['val_acc_history'][-1]))
+    print('Best results are achieved with params: ', best_comb)
     ############################################################################
     #                               END OF YOUR CODE                           #
     ############################################################################
