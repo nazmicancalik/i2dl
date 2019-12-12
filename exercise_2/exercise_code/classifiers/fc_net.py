@@ -196,16 +196,13 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        for i, h in enumerate(hidden_dims):
-            w_param_name, b_param_name = 'dw' + i + 1, 'db' + i + 1
-
-            index1 = input_dim if i == 0 else hidden_dims[i-1]
-            index2 = num_classes if i == len(hidden_dims) - 1 else h
-
+        dims = [input_dim] + hidden_dims + [num_classes]
+        for i in range(self.num_layers):
+            w_param_name, b_param_name = 'W' + str(i+1) , 'b' + str(i+1)
             self.params[w_param_name] = np.random.normal(
-                loc=0.0, scale=weight_scale, size=(index1, index2))
-            self.params[b_param_name] = np.zeros(index2)
-
+                loc=0.0, scale=weight_scale, size=(dims[i], dims[i+1]))
+            self.params[b_param_name] = np.zeros(dims[i+1])
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -265,19 +262,20 @@ class FullyConnectedNet(object):
         ############################################################################
         outs = {}
         caches = {}
-
-        for i in range(1, self.num_layers):
-            w_name, b_name = 'dw' + i, 'db' + i
-            input_data = X if i == 1 else outs[i-1]
-            outs[i], caches[i] = affine_relu_forward(
-                input_data, self.params[w_name], self.params[b_name])
-
-        # Execute the last affine layer
-        last_w_name, last_b_name = 'dw' + self.num_layers, 'db' + self.num_layers
-        outs[self.num_layers], caches[self.num_layers] = affine_forward(
-            outs[self.num_layers-1], self.params[last_w_name], self.params[last_b_name])
+        last_affine_index = self.num_layers
         
-        scores = outs[self.num_layers]
+        outs[0] = X
+        for i in range(1, self.num_layers):
+            w_name, b_name = 'W' + str(i), 'b' + str(i)
+            # input_data = X if i == 1 else outs[i-1]
+            outs[i], caches[i] = affine_relu_forward(outs[i-1], self.params[w_name], self.params[b_name])
+        
+        # Execute the last affine layer
+        last_w_name, last_b_name = 'W' + str(last_affine_index), 'b' + str(last_affine_index)
+        outs[last_affine_index], caches[last_affine_index] = affine_forward(
+            outs[last_affine_index-1], self.params[last_w_name], self.params[last_b_name])
+        
+        scores = outs[last_affine_index]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -308,12 +306,25 @@ class FullyConnectedNet(object):
         # a factor of 0.5 to simplify the expression for the gradient.        #
         #                                                                     #
         #######################################################################
-        dout = dscores
-        # First do the affine layer backward
-        dx,dw,db = affine_backward(dout,caches[self.num_layers])
-
-        for i in range(self.num_layers,1,-1):
-          pass   
+         
+        # Add regularization loss to data loss
+        reg_loss  = 0.0
+        for i in range(1,self.num_layers+1):
+            w_name = 'W' + str(i)
+            reg_loss += 0.5 * self.reg * np.sum(self.params[w_name]*self.params[w_name])
+        
+        #  First do the affine layer backward
+        w_name, b_name = 'W' + str(last_affine_index), 'b' + str(last_affine_index)
+        dscores,grads[w_name],grads[b_name] = affine_backward(dscores,caches[last_affine_index])
+        grads[w_name] += self.reg * self.params[w_name]
+        
+        # Do the hidden layers
+        for i in range(last_affine_index-1,0,-1):
+            w_name, b_name = 'W' + str(i), 'b' + str(i) 
+            dscores,grads[w_name],grads[b_name] = affine_relu_backward(dscores,caches[i])
+            grads[w_name] += self.reg * self.params[w_name]
+        
+        loss += reg_loss
         #######################################################################
         #                             END OF YOUR CODE                        #
         #######################################################################
